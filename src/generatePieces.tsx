@@ -66,12 +66,11 @@ const returnSquareProperties = (num: number) => {
   }
 };
 
+//RECURSION
 const createBoardSquares = (id: number) => {
   if (id > 63) return;
-
   const { hasAPiece, pieceColor, player, color, isAking } =
     returnSquareProperties(id);
-
   initialBoard.push({
     id,
     color,
@@ -81,7 +80,12 @@ const createBoardSquares = (id: number) => {
     player,
     isAking,
   });
+
   createBoardSquares(id + 1);
 };
 
-export const generatePieces = () => createBoardSquares(0);
+export const generatePieces = () => {
+  createBoardSquares(0);
+
+  return initialBoard;
+};

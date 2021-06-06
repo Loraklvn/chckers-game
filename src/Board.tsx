@@ -1,95 +1,18 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
-// import { LightenDarkenColor } from 'lighten-darken-color';
+import {
+  generatePieces,
+  player1PieceColor,
+  player2PieceColor,
+  SquareType,
+} from "./generatePieces";
 import Piece from "./Piece";
 
-const darker = "#BA7A3A";
-const lighter = "#F0D2B4";
-export const player1PieceColor = "black";
-export const player2PieceColor = "white";
+let initialBoard: SquareType[] = [];
 
-type SquareType = {
-  id: number;
-  color: string;
-  acceptPiece: boolean;
-  hasAPiece: boolean;
-  pieceColor: string;
-  player: number;
-  isAking: boolean;
-};
-
-const initialBoard: SquareType[] = [];
-
-const returnSquareProperties = (num: number) => {
-  const player2Properties = {
-    color: darker,
-    hasAPiece: true,
-    pieceColor: player2PieceColor,
-    player: 2,
-    isAking: false,
-  };
-  const noPlayerProperties = {
-    color: darker,
-    hasAPiece: false,
-    pieceColor: "",
-    player: 0,
-    isAking: false,
-  };
-
-  const player1Properties = {
-    color: darker,
-    hasAPiece: true,
-    pieceColor: player1PieceColor,
-    player: 1,
-    isAking: false,
-  };
-
-  if (num < 8 && num % 2 !== 0) {
-    return player2Properties;
-  } else if (num > 7 && num < 16 && num % 2 === 0) {
-    return player2Properties;
-  } else if (num > 15 && num < 24 && num % 2 !== 0) {
-    return player2Properties;
-  } else if (num > 23 && num < 32 && num % 2 === 0) {
-    return noPlayerProperties;
-  } else if (num > 31 && num < 40 && num % 2 !== 0) {
-    return noPlayerProperties;
-  } else if (num > 39 && num < 48 && num % 2 === 0) {
-    return player1Properties;
-  } else if (num > 47 && num < 56 && num % 2 !== 0) {
-    return player1Properties;
-  } else if (num > 55 && num % 2 === 0) {
-    return player1Properties;
-  } else {
-    return {
-      color: lighter,
-      hasAPiece: false,
-      pieceColor: "",
-      player: 0,
-      isAking: false,
-    };
-  }
-};
-
-const createBoardSquares = (id: number) => {
-  if (id > 63) return;
-
-  const { hasAPiece, pieceColor, player, color, isAking } =
-    returnSquareProperties(id);
-
-  initialBoard.push({
-    id,
-    color,
-    acceptPiece: color === darker,
-    hasAPiece,
-    pieceColor,
-    player,
-    isAking,
-  });
-  createBoardSquares(id + 1);
-};
-
-createBoardSquares(0);
+if (!initialBoard.length) {
+  initialBoard = generatePieces();
+}
 
 const initialSquare: SquareType = {
   id: 0,
@@ -100,16 +23,25 @@ const initialSquare: SquareType = {
   player: 0,
   isAking: false,
 };
-const initialCordinates = {
+
+type PieceSelectedDataType = {
+  currentPiecePosition: number;
+  currentPieceSelected: SquareType;
+};
+
+const initialPieceSelectedData = {
   currentPiecePosition: 0,
-  nextPosition: 0,
   currentPieceSelected: initialSquare,
-  nextSquare: initialSquare,
 };
 
 type PlayersScoreType = {
   player1: number;
   player2: number;
+};
+
+const initialPlayersScore = {
+  player1: 0,
+  player2: 0,
 };
 
 type PropsType = {
@@ -122,25 +54,22 @@ const Board = ({
 }: PropsType): React.ReactElement => {
   const [board, setBoard] = useState(initialBoard);
   const [currentTurn, setCurrentTurn] = useState(1);
-  const [coordinates, setCoordinates] = useState(initialCordinates);
-  const { currentPiecePosition, currentPieceSelected } = coordinates;
+  const [pieceSelectedData, setPieceSelectedData] =
+    useState<PieceSelectedDataType>(initialPieceSelectedData);
+  const { currentPiecePosition, currentPieceSelected } = pieceSelectedData;
   const [possibleMovesIndexes, setPossibleMovesIndexes] = useState<number[]>(
     []
   );
   const [piecesWithValidMovesIndexes, setPiecesWithValidMovesIndexes] =
     useState<number[]>([]);
-  const [playersScore, setPlayersScore] = useState<PlayersScoreType>({
-    player1: 0,
-    player2: 0,
-  });
+  const [playersScore, setPlayersScore] =
+    useState<PlayersScoreType>(initialPlayersScore);
   const [userMustKeepJumping, setUserMustKeepJumping] = useState(false);
   const [playerWinner, setPlayerWinner] = useState(0);
 
-  console.log("playersScore: ", playersScore);
-
   useEffect(() => {
     if (playerWinner) {
-      alert(`Black ${playerWinner} Won`);
+      alert(`${playerWinner === 1 ? "Black" : "White"} Player Won!`);
     }
   }, [playerWinner]);
 
@@ -165,9 +94,6 @@ const Board = ({
       (piece) => returnPiecePlays(piece, piece.index).length
     );
 
-    console.log("player1HasMoves : ", player1HasMoves);
-    console.log("player2HasMoves : ", player2HasMoves);
-
     !player1HasMoves && setPlayerWinner(2);
     !player2HasMoves && setPlayerWinner(1);
   };
@@ -188,6 +114,7 @@ const Board = ({
   ) => {
     const squareInstance = board[squareIndex];
     if (piece.isAking) {
+      //TO DETERMINE THE DIRECTION WHERE KING IS TRYING TO JUMP
       const sign = Math.sign(squareIndex - pieceIndex);
       const indexNextPosition =
         sign > 0
@@ -270,14 +197,14 @@ const Board = ({
     piece: SquareType,
     pieceIndex: number
   ) => {
-    const indexesPossibleMoves: number[] = [];
+    const indexesPossibleJumps: number[] = [];
     board.forEach((square, squareIndex) => {
       if (allowJumpCondition(piece, pieceIndex, squareIndex)) {
-        indexesPossibleMoves.push(squareIndex);
+        indexesPossibleJumps.push(squareIndex);
       }
     });
 
-    return indexesPossibleMoves;
+    return indexesPossibleJumps;
   };
 
   const returnPieceAllPossibleMoves = (
@@ -302,8 +229,7 @@ const Board = ({
       currentPieceIndex
     );
     if (indexesPossibleJumps.length) {
-      setCoordinates({
-        ...coordinates,
+      setPieceSelectedData({
         currentPiecePosition: currentPieceIndex,
         currentPieceSelected: lastPieceMoved,
       });
@@ -317,7 +243,7 @@ const Board = ({
 
   const validateNextMove = (nextPosition: number) => {
     if (!possibleMovesIndexes.includes(nextPosition)) {
-      setCoordinates(initialCordinates);
+      setPieceSelectedData(initialPieceSelectedData);
       setPossibleMovesIndexes([]);
       console.log("not valid move");
       return false;
@@ -354,7 +280,7 @@ const Board = ({
       checkForPlayerWithNoLegalMoves(newBoardPositions);
       handleSetCore(newBoardPositions);
       setPossibleMovesIndexes([]);
-      setCoordinates(initialCordinates);
+      setPieceSelectedData(initialPieceSelectedData);
       !canCurrentUserKeepJumping(
         newBoardPositions[indexNextPosition],
         indexNextPosition
@@ -385,7 +311,7 @@ const Board = ({
       checkForPlayerWithNoLegalMoves(newBoardPositions);
       handleSetCore(newBoardPositions);
       setPossibleMovesIndexes([]);
-      setCoordinates(initialCordinates);
+      setPieceSelectedData(initialPieceSelectedData);
       !canCurrentUserKeepJumping(
         newBoardPositions[indexNextPosition],
         indexNextPosition
@@ -415,7 +341,7 @@ const Board = ({
     setBoard(newBoardPositions);
     checkForPlayerWithNoLegalMoves(newBoardPositions);
     setPossibleMovesIndexes([]);
-    setCoordinates(initialCordinates);
+    setPieceSelectedData(initialPieceSelectedData);
     setCurrentTurn((prevState) => (prevState === 1 ? 2 : 1));
   };
 
@@ -430,7 +356,7 @@ const Board = ({
   const returnPiecePlays = (piece: SquareType, pieceIndex: number) => {
     if (!piece.hasAPiece) {
       setPossibleMovesIndexes([]);
-      setCoordinates(initialCordinates);
+      setPieceSelectedData(initialPieceSelectedData);
       return [];
     }
     const possibleMoves: number[] = [];
@@ -442,27 +368,27 @@ const Board = ({
     return possibleMoves;
   };
 
-  const returnPiecesHaveValidMoves = (pieceColor: string) => {
+  const returnPiecesWithValidMoves = (pieceColor: string) => {
     const piecesWithTheColor = board
       .map((piece, index) => ({ ...piece, index }))
       .filter((piece) => piece.pieceColor === pieceColor);
 
-    const piecesWithValidMove = piecesWithTheColor
+    const piecesWithValidMoves = piecesWithTheColor
       .filter((piece) => {
         return !!returnPiecePlays(piece, piece.index).length;
       })
       .map((piece) => piece.index);
     setPossibleMovesIndexes([]);
 
-    console.log("piecesWithValidMove: ", piecesWithValidMove);
-    setPiecesWithValidMovesIndexes(piecesWithValidMove);
+    console.log("piecesWithValidMoves: ", piecesWithValidMoves);
+    setPiecesWithValidMovesIndexes(piecesWithValidMoves);
 
-    return piecesWithValidMove;
+    return piecesWithValidMoves;
   };
 
   useEffect(() => {
     !currentPiecePosition &&
-      returnPiecesHaveValidMoves(
+      returnPiecesWithValidMoves(
         currentTurn === 1 ? player1PieceColor : player2PieceColor
       );
     currentPiecePosition && setPiecesWithValidMovesIndexes([]);
@@ -470,12 +396,13 @@ const Board = ({
   }, [currentTurn, currentPiecePosition]);
 
   useEffect(() => {
+    //PASS SCORE TO PARENT'S COMPONENT
     passPlayersScore(playersScore);
   }, [playersScore]);
 
-  const handleClickSquare = (square: SquareType, index: number) => {
+  const handleClickPiece = (square: SquareType, index: number) => {
     !currentPiecePosition &&
-      setCoordinates((prevState) => ({
+      setPieceSelectedData((prevState) => ({
         ...prevState,
         currentPiecePosition: index,
         currentPieceSelected: square,
@@ -484,7 +411,7 @@ const Board = ({
 
   const resetGame = () => {
     setBoard(initialBoard);
-    setCoordinates(initialCordinates);
+    setPieceSelectedData(initialPieceSelectedData);
     setCurrentTurn(1);
     setPlayersScore({ player1: 0, player2: 0 });
     setPossibleMovesIndexes([]);
@@ -493,97 +420,96 @@ const Board = ({
   };
 
   return (
-    <div
-      style={{
-        width: 650,
-        display: "flex",
-        flexWrap: "wrap",
-        // border: "1px solid green",
-        margin: 20,
-      }}
-    >
-      {board.map((square, i) => {
-        const { id, color, hasAPiece, pieceColor, isAking, player } = square;
-        return (
-          <div
-            key={id}
-            style={{
-              width: 75,
-              height: 75,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              backgroundColor: possibleMovesIndexes.includes(i)
-                ? "rgb(238, 238, 255)"
-                : color,
-            }}
-            onClick={() => {
-              // setPiecesWithValidMovesIndexes([]);
-              const applyOnClick = () => {
-                if (
-                  //VALIDATE PLAYER TURN
-                  currentTurn === player ||
-                  currentTurn === currentPieceSelected.player
-                ) {
-                  handleClickSquare(square, i);
-                  !currentPiecePosition
-                    ? returnPiecePlays(square, i)
-                    : //ONCE THE PIECE HAS BEEN SELECTED, TRY MOVE GET EXECUTED
-                      indicateMovementTry(i);
-                } else {
-                  console.log("It's not your turn modofokrt");
-                }
-              };
-
-              //FORCE PLAYER TO KEEP JUMPIMG
-              if (userMustKeepJumping && possibleMovesIndexes.includes(i)) {
-                applyOnClick();
-              }
-              if (!userMustKeepJumping) {
-                applyOnClick();
-              }
-            }}
-          >
-            {hasAPiece ? (
-              <Piece
-                pieceColor={pieceColor}
-                showHasValidMove={piecesWithValidMovesIndexes.includes(i)}
-                selected={currentPiecePosition === i}
-                isAking={isAking}
-                id={id}
-              />
-            ) : (
-              <span>{id}</span>
-            )}
-          </div>
-        );
-      })}
+    <>
       <div
         style={{
+          width: 650,
           display: "flex",
-          justifyContent: "space-between",
-          width: 600,
-          paddingTop: 20,
+          flexWrap: "wrap",
+          margin: 10,
         }}
       >
-        <button
+        {board.map((square, i) => {
+          const { id, color, hasAPiece, pieceColor, isAking, player } = square;
+          return (
+            <div
+              key={id}
+              style={{
+                width: 75,
+                height: 75,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: possibleMovesIndexes.includes(i)
+                  ? "rgb(238, 238, 255)"
+                  : color,
+              }}
+              onClick={() => {
+                const applyOnClick = () => {
+                  if (
+                    //VALIDATE PLAYER TURN
+                    currentTurn === player ||
+                    currentTurn === currentPieceSelected.player
+                  ) {
+                    handleClickPiece(square, i);
+                    !currentPiecePosition
+                      ? returnPiecePlays(square, i)
+                      : //ONCE THE PIECE HAS BEEN SELECTED, TRY MOVE GET EXECUTED
+                        indicateMovementTry(i);
+                  } else {
+                    console.log("It's not your turn modofokrt");
+                  }
+                };
+
+                //FORCE PLAYER TO KEEP JUMPIMG
+                if (userMustKeepJumping && possibleMovesIndexes.includes(i)) {
+                  applyOnClick();
+                }
+                if (!userMustKeepJumping) {
+                  applyOnClick();
+                }
+              }}
+            >
+              {hasAPiece ? (
+                <Piece
+                  pieceColor={pieceColor}
+                  showHasValidMove={piecesWithValidMovesIndexes.includes(i)}
+                  selected={currentPiecePosition === i}
+                  isAking={isAking}
+                  id={id}
+                />
+              ) : // <span>{id}</span>
+              null}
+            </div>
+          );
+        })}
+        <div
           style={{
-            fontSize: 14,
-            padding: "6px 12px",
-            display: "inline-block",
-            textDecoration: "none",
-            border: "1px solid transparent",
-            color: "#333",
-            backgroundColor: "#fff",
-            borderColor: "#ccc",
-            borderRadius: 4,
+            display: "flex",
+            justifyContent: "space-between",
+            width: 600,
+            paddingTop: 20,
           }}
-          onClick={resetGame}
         >
-          Reset Game
-        </button>
+          <button
+            style={{
+              fontSize: 14,
+              padding: "6px 12px",
+              display: "inline-block",
+              textDecoration: "none",
+              border: "1px solid transparent",
+              color: "#333",
+              backgroundColor: "#fff",
+              borderColor: "#ccc",
+              borderRadius: 4,
+            }}
+            onClick={resetGame}
+          >
+            Reset Game
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 export default Board;

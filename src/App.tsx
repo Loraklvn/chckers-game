@@ -1,5 +1,6 @@
 import { useState } from "react";
-import Board, { player1PieceColor, player2PieceColor } from "./Board";
+import Board from "./Board";
+import { player1PieceColor, player2PieceColor } from "./generatePieces";
 import StaticPiece from "./StaticPiece";
 
 function App() {
@@ -9,54 +10,64 @@ function App() {
     player2: 0,
   });
   return (
-    <div style={{ display: "flex", justifyContent: "center" }}>
-      <div
+    <>
+      <h1
         style={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "flex-end",
-
-          width: "100%",
-          // border: "1px solid blue",
-          padding: 25,
+          fontSize: "32px",
+          fontWeight: 800,
+          fontFamily: "sans-serif",
+          textAlign: "center",
+          margin: 0,
         }}
       >
-        {/* <span>
-           
-        </span> */}
-        <div
+        Checkers Game
+      </h1>
+      <article style={{ display: "flex", justifyContent: "center" }}>
+        <section
           style={{
             display: "flex",
             flexDirection: "column",
-            justifyContent: "space-between",
-            padding: 5,
-            borderRadius: 30,
-            backgroundColor: "rgba(0,0,0,.4)",
+            justifyContent: "center",
+            alignItems: "flex-end",
+            width: "100%",
+            padding: 25,
           }}
         >
-          <span style={{ margin: 10 }}>
-            <StaticPiece
-              colorTurn={currentTurn === 2}
-              content={player2}
-              pieceColor={player2PieceColor}
-            />
-          </span>
-          <span style={{ margin: 10 }}>
-            <StaticPiece
-              colorTurn={currentTurn === 1}
-              content={player1}
-              pieceColor={player1PieceColor}
-            />
-          </span>
-        </div>
-      </div>
-      <Board
-        passPlayersScore={setPlayersScore}
-        passCurrentTurn={setCurrenturn}
-      />
-      <div style={{ width: "100%" }}></div>
-    </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              padding: 5,
+              borderRadius: 30,
+              backgroundColor: "rgba(0,0,0,.4)",
+            }}
+          >
+            <span style={{ margin: 10 }}>
+              <StaticPiece
+                colorTurn={currentTurn === 2}
+                content={player2}
+                pieceColor={player2PieceColor}
+              />
+            </span>
+            <span style={{ margin: 10 }}>
+              <StaticPiece
+                colorTurn={currentTurn === 1}
+                content={player1}
+                pieceColor={player1PieceColor}
+              />
+            </span>
+          </div>
+        </section>
+        <section>
+          <Board
+            passPlayersScore={setPlayersScore}
+            passCurrentTurn={setCurrenturn}
+          />
+        </section>
+        <section style={{ width: "100%" }} />
+      </article>
+    </>
   );
 }
 

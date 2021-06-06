@@ -8,7 +8,6 @@ type PropsType = {
   showHasValidMove: boolean;
 };
 const Piece = ({
-  id,
   pieceColor,
   isAking,
   selected,
@@ -32,7 +31,7 @@ const Piece = ({
       }}
     >
       <span style={{ color: pieceColor === "white" ? "black" : "white" }}>
-        {isAking ? "KING" : id}
+        {isAking ? "KING" : ""}
       </span>
     </div>
   );
