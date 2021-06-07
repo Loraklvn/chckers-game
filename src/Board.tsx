@@ -1,18 +1,91 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
-import {
-  generatePieces,
-  player1PieceColor,
-  player2PieceColor,
-  SquareType,
-} from "./generatePieces";
 import Piece from "./Piece";
+export const player1PieceColor = "black";
+export const player2PieceColor = "white";
+const darker = "#BA7A3A";
+const lighter = "#F0D2B4";
 
-let initialBoard: SquareType[] = [];
+export type SquareType = {
+  id: number;
+  color: string;
+  acceptPiece: boolean;
+  hasAPiece: boolean;
+  pieceColor: string;
+  player: number;
+  isAking: boolean;
+};
+const initialBoard: SquareType[] = [];
 
-if (!initialBoard.length) {
-  initialBoard = generatePieces();
-}
+const player2Properties = {
+  color: darker,
+  hasAPiece: true,
+  pieceColor: player2PieceColor,
+  player: 2,
+  isAking: false,
+};
+const noPlayerProperties = {
+  color: darker,
+  hasAPiece: false,
+  pieceColor: "",
+  player: 0,
+  isAking: false,
+};
+
+const player1Properties = {
+  color: darker,
+  hasAPiece: true,
+  pieceColor: player1PieceColor,
+  player: 1,
+  isAking: false,
+};
+
+const returnSquareProperties = (num: number) => {
+  if (num < 8 && num % 2 !== 0) {
+    return player2Properties;
+  } else if (num > 7 && num < 16 && num % 2 === 0) {
+    return player2Properties;
+  } else if (num > 15 && num < 24 && num % 2 !== 0) {
+    return player2Properties;
+  } else if (num > 23 && num < 32 && num % 2 === 0) {
+    return noPlayerProperties;
+  } else if (num > 31 && num < 40 && num % 2 !== 0) {
+    return noPlayerProperties;
+  } else if (num > 39 && num < 48 && num % 2 === 0) {
+    return player1Properties;
+  } else if (num > 47 && num < 56 && num % 2 !== 0) {
+    return player1Properties;
+  } else if (num > 55 && num % 2 === 0) {
+    return player1Properties;
+  } else {
+    return {
+      color: lighter,
+      hasAPiece: false,
+      pieceColor: "",
+      player: 0,
+      isAking: false,
+    };
+  }
+};
+
+//RECURSION
+const createIinialPieces = (id: number) => {
+  if (id > 63) return;
+  const { hasAPiece, pieceColor, player, color, isAking } =
+    returnSquareProperties(id);
+  initialBoard.push({
+    id,
+    color,
+    acceptPiece: color === darker,
+    hasAPiece,
+    pieceColor,
+    player,
+    isAking,
+  });
+
+  createIinialPieces(id + 1);
+};
+createIinialPieces(0);
 
 const initialSquare: SquareType = {
   id: 0,
@@ -48,7 +121,7 @@ type PropsType = {
   passCurrentTurn: (turn: number) => void;
   passPlayersScore: (props: PlayersScoreType) => void;
 };
-const Board = ({
+const BoardComponent = ({
   passCurrentTurn,
   passPlayersScore,
 }: PropsType): React.ReactElement => {
@@ -77,7 +150,7 @@ const Board = ({
     //DETERMINE IF ONE PLAYER JUMPED ALL OPONENT'S PIECES
     playersScore.player1 === 12 && setPlayerWinner(1);
     playersScore.player2 === 12 && setPlayerWinner(2);
-  }, [playersScore]);
+  }, [playersScore.player1, playersScore.player2]);
 
   const checkForPlayerWithNoLegalMoves = (currentBoard: SquareType[]) => {
     const player1Pieces = currentBoard
@@ -94,6 +167,7 @@ const Board = ({
       (piece) => returnPiecePlays(piece, piece.index).length
     );
 
+    setPossibleMovesIndexes([]);
     !player1HasMoves && setPlayerWinner(2);
     !player2HasMoves && setPlayerWinner(1);
   };
@@ -107,33 +181,41 @@ const Board = ({
     setPlayersScore({ player1, player2 });
   };
 
+  const allowToJumpInAnyDirection = (
+    piece: SquareType,
+    pieceIndex: number,
+    squareIndex: number
+  ) => {
+    //CONDITION TO DETERMINE THE DIRECTION WHERE THE PLAYER IS TRYING TO JUMP
+    const pieceToBeJumpedInstance = board[squareIndex];
+    const sign = Math.sign(squareIndex - pieceIndex);
+    const indexNextPosition =
+      sign > 0
+        ? squareIndex + Math.abs(pieceIndex - squareIndex)
+        : squareIndex - Math.abs(pieceIndex - squareIndex);
+    const pieceToJumpIsValid =
+      Math.abs(pieceIndex - squareIndex) === 9 ||
+      Math.abs(pieceIndex - squareIndex) === 7;
+
+    if (pieceToJumpIsValid) {
+      return (
+        !!pieceToBeJumpedInstance.player &&
+        pieceToBeJumpedInstance.player !== piece.player &&
+        board[indexNextPosition]?.player === 0 &&
+        board[indexNextPosition]?.acceptPiece
+      );
+    }
+  };
+
   const allowJumpCondition = (
     piece: SquareType,
     pieceIndex: number,
     squareIndex: number
   ) => {
-    const squareInstance = board[squareIndex];
+    const pieceToBeJumpedInstance = board[squareIndex];
     if (piece.isAking) {
-      //TO DETERMINE THE DIRECTION WHERE KING IS TRYING TO JUMP
-      const sign = Math.sign(squareIndex - pieceIndex);
-      const indexNextPosition =
-        sign > 0
-          ? squareIndex + Math.abs(pieceIndex - squareIndex)
-          : squareIndex - Math.abs(pieceIndex - squareIndex);
-      const pieceToJumpIsValid =
-        Math.abs(pieceIndex - squareIndex) === 9 ||
-        Math.abs(pieceIndex - squareIndex) === 7;
-
-      if (pieceToJumpIsValid) {
-        return (
-          !!squareInstance.player &&
-          board[indexNextPosition]?.player === 0 &&
-          board[indexNextPosition]?.acceptPiece &&
-          squareInstance.player !== piece.player
-        );
-      }
+      return allowToJumpInAnyDirection(piece, pieceIndex, squareIndex);
     }
-
     if (piece.player === 1) {
       const indexNextPosition = squareIndex - (pieceIndex - squareIndex);
       const validPlayer1ChosenSquare =
@@ -141,10 +223,9 @@ const Board = ({
 
       if (validPlayer1ChosenSquare) {
         return (
-          !!squareInstance.player &&
+          pieceToBeJumpedInstance.player === 2 &&
           board[indexNextPosition]?.player === 0 &&
-          board[indexNextPosition]?.acceptPiece &&
-          squareInstance.player === 2
+          board[indexNextPosition]?.acceptPiece
         );
       }
     }
@@ -156,10 +237,9 @@ const Board = ({
 
       if (validPlayer2ChosenSquare) {
         return (
-          !!squareInstance.player &&
+          pieceToBeJumpedInstance.player === 1 &&
           board[indexNextPosition]?.player === 0 &&
-          board[indexNextPosition]?.acceptPiece &&
-          squareInstance.player === 1
+          board[indexNextPosition]?.acceptPiece
         );
       }
     }
@@ -182,6 +262,7 @@ const Board = ({
     if (piece.player === 1 && !squareInstance.player) {
       const validPlayer1ChosenSquare =
         pieceIndex - squareIndex === 9 || pieceIndex - squareIndex === 7;
+
       return validPlayer1ChosenSquare && squareInstance.acceptPiece;
     }
     if (piece.player === 2 && !squareInstance.player) {
@@ -220,14 +301,23 @@ const Board = ({
     return indexesPossibleMoves;
   };
 
-  const canCurrentUserKeepJumping = (
+  const canCurrentPlayerKeepJumping = (
     lastPieceMoved: SquareType,
     currentPieceIndex: number
   ) => {
-    const indexesPossibleJumps = returnPieceAllPossibleJumps(
-      lastPieceMoved,
-      currentPieceIndex
-    );
+    const indexesPossibleJumps: number[] = [];
+    board.forEach((square, squareIndex) => {
+      if (
+        allowToJumpInAnyDirection(
+          lastPieceMoved,
+          currentPieceIndex,
+          squareIndex
+        )
+      ) {
+        indexesPossibleJumps.push(squareIndex);
+      }
+    });
+
     if (indexesPossibleJumps.length) {
       setPieceSelectedData({
         currentPiecePosition: currentPieceIndex,
@@ -245,7 +335,7 @@ const Board = ({
     if (!possibleMovesIndexes.includes(nextPosition)) {
       setPieceSelectedData(initialPieceSelectedData);
       setPossibleMovesIndexes([]);
-      console.log("not valid move");
+      console.log("not a valid move");
       return false;
     }
     return true;
@@ -255,10 +345,32 @@ const Board = ({
     if (!validateNextMove(pieceToBeJumpedIndex)) return;
     const pieceToBeJumped = board[pieceToBeJumpedIndex];
 
+    const setStatesValuesAfterJump = (
+      newBoardPositions: SquareType[],
+      indexNextPosition: number
+    ) => {
+      //JUMPED PIECE BECOME A NORMAL SQUARE
+      newBoardPositions[pieceToBeJumpedIndex].player = 0;
+      newBoardPositions[pieceToBeJumpedIndex].hasAPiece = false;
+      newBoardPositions[pieceToBeJumpedIndex].pieceColor = "";
+
+      setBoard(newBoardPositions);
+      checkForPlayerWithNoLegalMoves(newBoardPositions);
+      handleSetCore(newBoardPositions);
+      setPossibleMovesIndexes([]);
+      setPieceSelectedData(initialPieceSelectedData);
+      !canCurrentPlayerKeepJumping(
+        newBoardPositions[indexNextPosition],
+        indexNextPosition
+      ) && setCurrentTurn((prevState) => (prevState === 1 ? 2 : 1));
+    };
+    //CURRENT PLAYER IS 1
     if (pieceToBeJumped.player === 2) {
       const newBoardPositions = [...board];
       const indexNextPosition =
         pieceToBeJumpedIndex - (currentPiecePosition - pieceToBeJumpedIndex);
+
+      //EXCHANGING POSITION BETWEEN CURRENT AND NEXT
       newBoardPositions.splice(indexNextPosition, 1, {
         ...currentPieceSelected,
         isAking: indexNextPosition < 8 || currentPieceSelected.isAking,
@@ -266,30 +378,22 @@ const Board = ({
       newBoardPositions.splice(
         currentPiecePosition,
         1,
+        // NEW CLEAN SQUARE FOR CURRENT POSITION
         board[
           currentPiecePosition -
             (currentPiecePosition - pieceToBeJumpedIndex) * 2
         ]
       );
-      //JUMPED PIECE BECOME A NORMAL SQUARE
-      newBoardPositions[pieceToBeJumpedIndex].player = 0;
-      newBoardPositions[pieceToBeJumpedIndex].hasAPiece = false;
-      newBoardPositions[pieceToBeJumpedIndex].pieceColor = "";
 
-      setBoard(newBoardPositions);
-      checkForPlayerWithNoLegalMoves(newBoardPositions);
-      handleSetCore(newBoardPositions);
-      setPossibleMovesIndexes([]);
-      setPieceSelectedData(initialPieceSelectedData);
-      !canCurrentUserKeepJumping(
-        newBoardPositions[indexNextPosition],
-        indexNextPosition
-      ) && setCurrentTurn((prevState) => (prevState === 1 ? 2 : 1));
+      setStatesValuesAfterJump(newBoardPositions, indexNextPosition);
     }
+    //CURRENT PLAYER IS 2
     if (pieceToBeJumped.player === 1) {
       const newBoardPositions = [...board];
       const indexNextPosition =
         pieceToBeJumpedIndex + (pieceToBeJumpedIndex - currentPiecePosition);
+
+      //EXCHANGING POSITION BETWEEN CURRENT AND NEXT
       newBoardPositions.splice(indexNextPosition, 1, {
         ...currentPieceSelected,
         isAking: indexNextPosition > 55 || currentPieceSelected.isAking,
@@ -297,25 +401,14 @@ const Board = ({
       newBoardPositions.splice(
         currentPiecePosition,
         1,
+        // NEW CLEAN SQUARE FOR CURRENT POSITION
         board[
           currentPiecePosition +
             (pieceToBeJumpedIndex - currentPiecePosition) * 2
         ]
       );
-      //JUMPED PIECE BECOME A NORMAL SQUARE
-      newBoardPositions[pieceToBeJumpedIndex].player = 0;
-      newBoardPositions[pieceToBeJumpedIndex].hasAPiece = false;
-      newBoardPositions[pieceToBeJumpedIndex].pieceColor = "";
 
-      setBoard(newBoardPositions);
-      checkForPlayerWithNoLegalMoves(newBoardPositions);
-      handleSetCore(newBoardPositions);
-      setPossibleMovesIndexes([]);
-      setPieceSelectedData(initialPieceSelectedData);
-      !canCurrentUserKeepJumping(
-        newBoardPositions[indexNextPosition],
-        indexNextPosition
-      ) && setCurrentTurn((prevState) => (prevState === 1 ? 2 : 1));
+      setStatesValuesAfterJump(newBoardPositions, indexNextPosition);
     }
   };
 
@@ -329,6 +422,7 @@ const Board = ({
     const piecePlayer2isKing =
       currentPieceSelected.player === 2 && nextPiecePosition > 55;
 
+    //EXCHANGING POSITION BETWEEN CURRENT AND NEXT
     newBoardPositions.splice(nextPiecePosition, 1, {
       ...currentPieceSelected,
       isAking:
@@ -346,9 +440,9 @@ const Board = ({
   };
 
   const indicateMovementTry = (nextPiecePosition: number) => {
-    const squareInstance = board[nextPiecePosition];
+    const pieceToBeJumpedInstance = board[nextPiecePosition];
     //IF NEXT POSITION HAS A PIECE IT'S TRYING TO JUMP
-    squareInstance.hasAPiece
+    pieceToBeJumpedInstance.hasAPiece
       ? executeNextJump(nextPiecePosition)
       : executeNextMove(nextPiecePosition);
   };
@@ -363,7 +457,6 @@ const Board = ({
     possibleMoves.push(...returnPieceAllPossibleMoves(piece, pieceIndex));
     possibleMoves.push(...returnPieceAllPossibleJumps(piece, pieceIndex));
 
-    console.log("indexesPossibleMoves: ", possibleMoves);
     setPossibleMovesIndexes(possibleMoves);
     return possibleMoves;
   };
@@ -413,6 +506,7 @@ const Board = ({
     setBoard(initialBoard);
     setPieceSelectedData(initialPieceSelectedData);
     setCurrentTurn(1);
+    setPlayerWinner(0);
     setPlayersScore({ player1: 0, player2: 0 });
     setPossibleMovesIndexes([]);
     setPiecesWithValidMovesIndexes([]);
@@ -512,4 +606,4 @@ const Board = ({
     </>
   );
 };
-export default Board;
+export default BoardComponent;

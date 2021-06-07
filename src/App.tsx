@@ -1,6 +1,5 @@
 import { useState } from "react";
-import Board from "./Board";
-import { player1PieceColor, player2PieceColor } from "./generatePieces";
+import Board, { player1PieceColor, player2PieceColor } from "./Board";
 import StaticPiece from "./StaticPiece";
 
 function App() {
